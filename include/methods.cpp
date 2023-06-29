@@ -16,25 +16,126 @@ void environment_measurement(int measurements, int delay_time) {
 }
 
 
-bool connectWifi(const char *ssid , const char *password, int interval, int max_con_count) {
+String avail_networks_html = "";
+
+void scanWiFiNetworks()
+{
+  // Disconnect WiFi to scan for networks
+  WiFi.mode(WIFI_STA);
+  WiFi.disconnect();
+
+  int available_wifi_networks = WiFi.scanNetworks();
+
+  avail_networks_html = "";
+  for (int i = 0; i < available_wifi_networks && i < 5; ++i)
+  {
+    // Print SSID and RSSI for each network found
+    avail_networks_html += "<li id='";
+    avail_networks_html += WiFi.SSID(i);
+    avail_networks_html += "'>";
+    avail_networks_html += WiFi.SSID(i);
+    avail_networks_html += " (";
+    avail_networks_html += WiFi.RSSI(i);
+    avail_networks_html += " db) ";
+    avail_networks_html += (WiFi.encryptionType(i) == ENC_TYPE_NONE) ? " " : "*";
+    avail_networks_html += "</li>";
+  }
+
+  delay(100);
+}
+
+
+void createWebServer()
+{
+  {   
+    server.on("/", []() {
+      timer1_detachInterrupt(); // Disable timer / reset of ESP since someone connected to the Hostpot
+
+      IPAddress hotspot_ip = WiFi.softAPIP();
+      String ipStr = String(hotspot_ip[0]) + '.' + String(hotspot_ip[1]) + '.' + String(hotspot_ip[2]) + '.' + String(hotspot_ip[3]);
+      
+      char html_buffer[1600];
+      snprintf(html_buffer, 1600, configsite_config_html.c_str(), "ESPclimatesensor"+String(sensorNo), ipStr.c_str(), avail_networks_html.c_str());
+
+      server.send(200, "text/html", html_buffer);
+    });
+  
+    server.on("/setting", []() {
+      String qssid = server.arg("ssid");
+      String qpass = server.arg("pass");
+      String qsensorno = server.arg("sensorno");
+
+      String html_code = "";
+      if (qssid.length() > 0 && qpass.length() > 0 && qsensorno.length() > 0) {
+        
+        eeprom_write_string(EEPROM_SSID_START_IDX, EEPROM_SSID_BYTES_LEN, qssid); 
+        eeprom_write_string(EEPROM_WIFIPASS_START_IDX, EEPROM_WIFIPASS_BYTES_LEN, qpass);
+        eeprom_write_string(EEPROM_SENSORNO_START_IDX, EEPROM_SENSORNO_BYTES_LEN, qsensorno);
+
+        EEPROM.commit();
+
+        server.send(200, "text/html", configsite_success_html);
+        ESP.reset();
+      } 
+      else {
+        server.send(200, "text/html", configsite_error_html);
+      }
+ 
+    });
+
+    server.on("/rescan", []() {
+      scanWiFiNetworks();
+
+      //"Page refresh" by redirecting back to the main / basedir
+      server.sendHeader("Location", String("/"), true);
+      server.send(302, "text/plain", "");
+    });
+  } 
+}
+
+
+void setupHotSpot(){  
+  scanWiFiNetworks();
+
+  // Re-enable WiFi and soft-AP
+  WiFi.softAP("ESPclimatesensor"+String(sensorNo), WIFI_SETUP_PASS);
+  #if (DEBUG_PRINT) 
+      Serial.println("HotSpot is started");
+  #endif
+
+  // TIMER INTERRUPT //
+  // Use Timer1, Timer0 already used by WiFi functionality
+  // Timer triggers reset of ESP when noone has connected to the WiFi AP in the timer's configured timespan
+  timer1_isr_init();
+  timer1_attachInterrupt(ISR_onTimer);
+  timer1_write(8388607); // maximum ticks for timer: 8388607 // ESP8266 has 80MHz clock, division by 256 = 312.5Khz (1 tick = 3.2us - 26.8435424 sec max), maximum ticks 8388607 
+
+  createWebServer();
+  server.begin();
+}
+
+
+bool connectWifi(int interval, int max_con_count) {
   // Try to connect
-  WiFi.hostname("ESP-host-" + String(SENSOR_NO));
-  WiFi.begin(ssid, password);
+  WiFi.hostname("ESPclimatesensor"+String(sensorNo));
+  WiFi.begin(wifi_ssid, wifi_password);
 
   int wifiConnCheckCount = 0;
   while (WiFi.status() != WL_CONNECTED && wifiConnCheckCount < max_con_count){
     delay(interval);
     wifiConnCheckCount++;
+
+    #if (DEBUG_PRINT) 
+      Serial.print(".");
+    #endif
   }
 
   // Check if connected
-  if (WiFi.status() != WL_CONNECTED){
-    WiFi.disconnect();
-    return false;
-  }
-  else{
+  if (WiFi.status() == WL_CONNECTED){
     return true;
   }
+
+  return false;
 }
 
 
