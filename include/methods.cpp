@@ -55,7 +55,7 @@ void createWebServer()
       String ipStr = String(hotspot_ip[0]) + '.' + String(hotspot_ip[1]) + '.' + String(hotspot_ip[2]) + '.' + String(hotspot_ip[3]);
       
       char html_buffer[1600];
-      snprintf(html_buffer, 1600, configsite_config_html.c_str(), "ESPclimatesensor"+String(sensorNo), ipStr.c_str(), avail_networks_html.c_str());
+      snprintf(html_buffer, 1600, configsite_config_html.c_str(), "ESPclimatesensor", ipStr.c_str(), avail_networks_html.c_str(), wifi_ssid.c_str(), wifi_password.c_str(), sensorNo.c_str());
 
       server.send(200, "text/html", html_buffer);
     });
