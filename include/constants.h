@@ -15,6 +15,6 @@
 #define TIME_TO_SLEEP 300       // Time ESP32 will go to sleep (in seconds)
 
 #define WIFI_CONN_CHECK_INTERVAL 1000
-#define WIFI_CONN_MAX_CHECK_COUNT 5
+#define WIFI_CONN_MAX_CHECK_COUNT 10
 
 
