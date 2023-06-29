@@ -19,8 +19,6 @@
 #include <config.h>
 #include <constants.h>
 
-#define DEBUG_PRINT true
-
 // Globals
 ESP8266WebServer server(80);
 WiFiClient wifiClient;
@@ -36,12 +34,12 @@ float glob_humidity;
 bool setup_mode = false;
 
 
-
+#if (ENABLE_HOTSPOT_TIMEOUT)
 IRAM_ATTR void ISR_onTimer()
 {
   ESP.reset();
 }
-
+#endif
 
 
 /* - - - - - - METHODS - - - - - - */
@@ -55,6 +53,10 @@ void setup() {
   #if (DEBUG_PRINT) 
     Serial.begin(115200);
   #endif
+
+  // Configure Flash Button for Entering Hotspot Setup Mode //
+  pinMode(0, INPUT_PULLUP);
+
 
   // Read Data from EEPROM //
   #if (DEBUG_PRINT) 
@@ -97,26 +99,39 @@ void setup() {
       ;
   } 
 
-  // Start WiFi //
-  #if (DEBUG_PRINT) 
-    Serial.println("Connecting to WiFi:" + wifi_ssid + " PASS:" + wifi_password);
-  #endif
-  if(! connectWifi(WIFI_CONN_CHECK_INTERVAL, WIFI_CONN_MAX_CHECK_COUNT)){
-    // Could not connect to WiFi
+  delay(250);
+
+  
+  // ENTER SETUP MODE
+  if(digitalRead(0) == LOW){ // Handling when FLASH-button is pressed during startup
     #if (DEBUG_PRINT) 
-      Serial.println("WiFi connection failed. Starting HotSpot");
+     Serial.println("Starting Setupmode");
     #endif
 
     setup_mode = true;
     setupHotSpot();
   }
-  else{
-    #if (DEBUG_PRINT) 
-      Serial.println("WiFi successfully connected");
-    #endif
-  }
-  
 
+  // ENTER MEASURE MODE
+  else{
+    // Start WiFi //
+    #if (DEBUG_PRINT) 
+      Serial.println("Connecting to WiFi:" + wifi_ssid + " PASS:" + wifi_password);
+    #endif
+    if(! connectWifi(WIFI_CONN_CHECK_INTERVAL, WIFI_CONN_MAX_CHECK_COUNT)){
+      // Could not connect to WiFi
+      #if (DEBUG_PRINT) 
+        Serial.println("WiFi connection failed.");
+      #endif
+
+      ESP.deepSleep(TIME_TO_SLEEP * uS_TO_S_FACTOR); // Set deepsleep for specified time and try connecting to WiFi on next wakeup again
+    }
+    else{
+      #if (DEBUG_PRINT) 
+        Serial.println("WiFi successfully connected");
+      #endif
+    }
+  }
 }
 
 
@@ -124,7 +139,7 @@ void setup() {
 void loop() {
 
   if(!setup_mode){
-    environment_measurement(3, 10);
+    environment_measurement(3, 100);
 
     // Format data as json
     String get_content = "?accessoryId=temperature"+sensorNo+"&value=" + String(glob_temperature);

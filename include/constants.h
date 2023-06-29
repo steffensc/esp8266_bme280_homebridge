@@ -1,5 +1,8 @@
 #pragma once 
 
+#define DEBUG_PRINT true
+#define ENABLE_HOTSPOT_TIMEOUT false
+
 // EEPROM Memory indexes / adresses
 #define EEPROM_SIZE 256 // max 512 Bytes!
 #define EEPROM_SSID_START_IDX 0

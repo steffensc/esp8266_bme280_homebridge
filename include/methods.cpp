@@ -49,7 +49,9 @@ void createWebServer()
 {
   {   
     server.on("/", []() {
-      timer1_detachInterrupt(); // Disable timer / reset of ESP since someone connected to the Hostpot
+      #if (ENABLE_HOTSPOT_TIMEOUT)
+        timer1_detachInterrupt(); // Disable timer / reset of ESP since someone connected to the Hostpot
+      #endif
 
       IPAddress hotspot_ip = WiFi.softAPIP();
       String ipStr = String(hotspot_ip[0]) + '.' + String(hotspot_ip[1]) + '.' + String(hotspot_ip[2]) + '.' + String(hotspot_ip[3]);
@@ -100,15 +102,17 @@ void setupHotSpot(){
   // Re-enable WiFi and soft-AP
   WiFi.softAP("ESPclimatesensor"+String(sensorNo), WIFI_SETUP_PASS);
   #if (DEBUG_PRINT) 
-      Serial.println("HotSpot is started");
+    Serial.println("HotSpot is started");
   #endif
 
-  // TIMER INTERRUPT //
-  // Use Timer1, Timer0 already used by WiFi functionality
-  // Timer triggers reset of ESP when noone has connected to the WiFi AP in the timer's configured timespan
-  timer1_isr_init();
-  timer1_attachInterrupt(ISR_onTimer);
-  timer1_write(8388607); // maximum ticks for timer: 8388607 // ESP8266 has 80MHz clock, division by 256 = 312.5Khz (1 tick = 3.2us - 26.8435424 sec max), maximum ticks 8388607 
+  #if (ENABLE_HOTSPOT_TIMEOUT)
+    // TIMER INTERRUPT //
+    // Use Timer1, Timer0 already used by WiFi functionality
+    // Timer triggers reset of ESP when noone has connected to the WiFi AP in the timer's configured timespan
+    timer1_isr_init();
+    timer1_attachInterrupt(ISR_onTimer);
+    timer1_write(8388607); // maximum ticks for timer: 8388607 // ESP8266 has 80MHz clock, division by 256 = 312.5Khz (1 tick = 3.2us - 26.8435424 sec max), maximum ticks 8388607 
+  #endif
 
   createWebServer();
   server.begin();
