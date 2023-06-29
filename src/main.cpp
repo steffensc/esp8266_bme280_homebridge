@@ -19,7 +19,7 @@
 #include <config.h>
 #include <constants.h>
 
-#define DEBUG_PRINT false
+#define DEBUG_PRINT true
 
 // Globals
 ESP8266WebServer server(80);
