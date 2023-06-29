@@ -43,4 +43,4 @@
 
 
 ### Project specific
-src/config.h
+include/config.h
