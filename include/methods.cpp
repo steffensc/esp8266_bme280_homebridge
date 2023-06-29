@@ -15,6 +15,7 @@ void environment_measurement(int measurements, int delay_time) {
   glob_humidity = (avg_humidity / measurements);
 }
 
+
 bool connectWifi(const char *ssid , const char *password, int interval, int max_con_count) {
   // Try to connect
   WiFi.hostname("ESP-host-" + String(SENSOR_NO));
@@ -36,26 +37,20 @@ bool connectWifi(const char *ssid , const char *password, int interval, int max_
   }
 }
 
-/*
-bool sendSensorData_php_api() {
+
+bool GET_SensorData(String http_endpoint, String get_payload) {
   bool success = false;
 
   if ((WiFi.status() == WL_CONNECTED)){
 
     // Start new http connection
     HTTPClient http_client;
-    if(http_client.begin(wifiClient, php_api_Endpoint)){
-      
-      // Format data as json
-      String htmlapirequest = "token=" + php_api_Token + "&";
-      htmlapirequest += "sensor=" + php_api_sensorNo + "&";
-      htmlapirequest += "temperature=" + String(glob_temperature) + "&";
-      htmlapirequest += "humidity="    + String(glob_humidity) + "&";
-      htmlapirequest += "pressure="    + String(glob_pressure);
 
-      // Post 
-      http_client.addHeader("Content-Type", "application/x-www-form-urlencoded");
-      int httpCode = http_client.POST(htmlapirequest);
+    String endpoint_url = http_endpoint + get_payload;
+    if(http_client.begin(wifiClient, endpoint_url)){
+
+      // GET 
+      int httpCode = http_client.GET();
 
       // Check if request was successful
       if (httpCode == 200){
@@ -70,9 +65,41 @@ bool sendSensorData_php_api() {
 
       return success;
     }    
+
   }
 
   return success;
 }
-*/
 
+
+bool POST_SensorData(String http_endpoint, String post_payload) {
+  bool success = false;
+
+  if ((WiFi.status() == WL_CONNECTED)){
+
+    // Start new http connection
+    HTTPClient http_client;
+    if(http_client.begin(wifiClient, http_endpoint)){
+
+      // POST 
+      http_client.addHeader("Content-Type", "application/x-www-form-urlencoded");
+      int httpCode = http_client.POST(post_payload);
+
+      // Check if request was successful
+      if (httpCode == 200){
+        success = true;
+      }
+      else{
+        success = false;
+      }
+
+      // Close connection
+      http_client.end();
+
+      return success;
+    }    
+
+  }
+
+  return success;
+}
