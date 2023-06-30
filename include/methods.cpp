@@ -57,7 +57,12 @@ void createWebServer()
       String ipStr = String(hotspot_ip[0]) + '.' + String(hotspot_ip[1]) + '.' + String(hotspot_ip[2]) + '.' + String(hotspot_ip[3]);
       
       char html_buffer[1600];
-      snprintf(html_buffer, 1600, configsite_config_html.c_str(), "ESPclimatesensor", ipStr.c_str(), avail_networks_html.c_str(), wifi_ssid.c_str(), wifi_password.c_str(), sensorNo.c_str());
+      snprintf(html_buffer, 1600, configsite_config_html.c_str(), "ESPclimatesensor", ipStr.c_str(), avail_networks_html.c_str(), wifi_ssid.c_str(), 
+      wifi_password.c_str(),
+      sensorNo.c_str(),
+      String(temperature_bias).c_str(),
+      String(humidity_bias).c_str()
+      );
 
       server.send(200, "text/html", html_buffer);
     });
@@ -66,6 +71,8 @@ void createWebServer()
       String qssid = server.arg("ssid");
       String qpass = server.arg("pass");
       String qsensorno = server.arg("sensorno");
+      String qtempbias = server.arg("tempbias");
+      String qhumibias = server.arg("humibias");
 
       String html_code = "";
       if (qssid.length() > 0 && qpass.length() > 0 && qsensorno.length() > 0) {
@@ -73,6 +80,10 @@ void createWebServer()
         eeprom_write_string(EEPROM_SSID_START_IDX, EEPROM_SSID_BYTES_LEN, qssid); 
         eeprom_write_string(EEPROM_WIFIPASS_START_IDX, EEPROM_WIFIPASS_BYTES_LEN, qpass);
         eeprom_write_string(EEPROM_SENSORNO_START_IDX, EEPROM_SENSORNO_BYTES_LEN, qsensorno);
+        float f_tempbias = qtempbias.toFloat();
+        eeprom_write_float(EEPROM_TEMP_BIAS_START_IDX, EEPROM_TEMP_BIAS_BYTES_LEN, f_tempbias);
+        float f_humibias = qhumibias.toFloat();
+        eeprom_write_float(EEPROM_HUMI_BIAS_START_IDX, EEPROM_HUMI_BIAS_BYTES_LEN, f_humibias);
 
         EEPROM.commit();
 

@@ -24,9 +24,11 @@ ESP8266WebServer server(80);
 WiFiClient wifiClient;
 Adafruit_BME280 bme;
 
-String wifi_ssid;
-String wifi_password;
-String sensorNo;
+String wifi_ssid = "";
+String wifi_password = "";
+String sensorNo = "";
+float temperature_bias = 0.0;
+float humidity_bias = 0.0;
 
 float glob_temperature;
 float glob_pressure;
@@ -64,12 +66,21 @@ void setup() {
   #endif
   EEPROM.begin(EEPROM_SIZE);
   delay(10);
-  wifi_ssid = "";
   eeprom_read_string(EEPROM_SSID_START_IDX, EEPROM_SSID_BYTES_LEN, wifi_ssid);
-  wifi_password = "";
   eeprom_read_string(EEPROM_WIFIPASS_START_IDX, EEPROM_WIFIPASS_BYTES_LEN, wifi_password);
-  sensorNo = "";
   eeprom_read_string(EEPROM_SENSORNO_START_IDX, EEPROM_SENSORNO_BYTES_LEN, sensorNo);
+  uint8_t eeprom_bytes[4];
+  eeprom_read_bytearr(EEPROM_TEMP_BIAS_START_IDX, EEPROM_TEMP_BIAS_BYTES_LEN, eeprom_bytes);
+  memcpy(&temperature_bias, &eeprom_bytes, 4); // converting bytearray to float
+  
+  eeprom_read_float(EEPROM_HUMI_BIAS_START_IDX, EEPROM_HUMI_BIAS_BYTES_LEN, &humidity_bias);
+  #if (DEBUG_PRINT) 
+    Serial.println("EEPROM temperature bias: ");
+    Serial.println(temperature_bias);
+    Serial.println("EEPROM humidity bias: ");
+    Serial.println(humidity_bias);
+  #endif
+
 
   // fallback to defaults if EEPROM is empty, initialize EEPROM with default values
   #if (DEBUG_PRINT) 
@@ -90,6 +101,16 @@ void setup() {
     eeprom_write_string(EEPROM_SENSORNO_START_IDX, EEPROM_SENSORNO_BYTES_LEN, sensorNo);
     EEPROM.commit();
   }
+  if(temperature_bias > 10.0 || temperature_bias < -10.0){
+    temperature_bias = DEFAULT_TEMP_BIAS;
+    eeprom_write_float(EEPROM_TEMP_BIAS_START_IDX, EEPROM_TEMP_BIAS_BYTES_LEN, temperature_bias);
+    EEPROM.commit();
+  }
+  if(humidity_bias > 10.0 || humidity_bias < -10.0){
+    humidity_bias = DEFAULT_HUMI_BIAS;
+    eeprom_write_float(EEPROM_HUMI_BIAS_START_IDX, EEPROM_HUMI_BIAS_BYTES_LEN, humidity_bias);
+    EEPROM.commit();
+  }
 
 
   // Init BME 280 //
@@ -99,7 +120,7 @@ void setup() {
       ;
   } 
 
-  delay(250);
+  delay(3000);
 
   
   // ENTER SETUP MODE
