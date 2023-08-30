@@ -8,8 +8,8 @@ Hardware:
 - I2C BME280 (temperature, pressure, humidity)
 
 ### Wiring
-| ESP8266  | BME280 |
-| -------- | ------- |
-| January  | $250    |
-| February | $80     |
-| March    | $420    |
+| ESP8266 | BME280 |
+| ------- | ------ |
+| D1      | 0      |
+| D2      | 0      |
+| D3      | 0      |
